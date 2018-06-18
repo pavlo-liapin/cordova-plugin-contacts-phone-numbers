@@ -92,6 +92,37 @@
                         if (phoneTypeLabelRef) CFRelease(phoneTypeLabelRef);
                     }
 
+                    //fetch emails
+                    NSMutableArray* allEmailsArray = [[NSMutableArray alloc] init];
+
+                    ABMultiValueRef emails = ABRecordCopyValue(ref, kABPersonEmailProperty);
+                    int countEmails = ABMultiValueGetCount(emails);
+
+                    for(CFIndex j = 0; j < countEmails; j++) {
+                        CFStringRef emailRef = ABMultiValueCopyValueAtIndex(emails, j);
+                        CFStringRef emailTypeLabelRef = ABMultiValueCopyLabelAtIndex(emails, j);
+                        NSString *email = (__bridge NSString *) emailRef;
+                        NSString *emailLabel = @"OTHER";
+                        if (emailTypeLabelRef) {
+                            if (CFEqual(emailTypeLabelRef, kABWorkLabel)) {
+                                emailLabel = @"WORK";
+                            } else if (CFEqual(emailTypeLabelRef, kABHomeLabel)) {
+                                emailLabel = @"HOME";
+                            }
+                        }
+
+                        // creating the nested element with the email details
+                        NSMutableDictionary* emailDictionary = [NSMutableDictionary dictionaryWithCapacity:1];
+                        [emailDictionary setObject: email forKey:@"email"];
+                        [emailDictionary setObject: emailLabel forKey:@"type"];
+                        // adding this phone number to the list of phone numbers for this user
+                        [allEmailsArray addObject:emailDictionary];
+
+                        if (emailRef) CFRelease(emailRef);
+                        if (emailTypeLabelRef) CFRelease(emailTypeLabelRef);
+
+                    }
+
                     // creating the contact object
                     NSString *displayName;
 
@@ -131,6 +162,23 @@
                     [contactDictionary setObject: lastName forKey:@"lastName"];
                     [contactDictionary setObject: middleName forKey:@"middleName"];
                     [contactDictionary setObject: phoneNumbersArray forKey:@"phoneNumbers"];
+                    [contactDictionary setObject: allEmailsArray forKey:@"emails"];
+
+                    //fetching photo
+                    NSData *imageData = (__bridge_transfer NSData *) ABPersonCopyImageData(ref);
+                    UIImage *image = [UIImage imageWithData:(NSData *)imageData];
+
+                    //photo is saved to grab path
+                    NSError *err;
+                    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+                    NSString * photoPath = [paths  objectAtIndex:0];
+                    photoPath = [photoPath stringByAppendingPathComponent:contactId];
+                    [imageData writeToFile:photoPath options:NSDataWritingAtomic error:&err];
+                    if(err) {
+                        photoPath = @"";
+                    }
+
+                    [contactDictionary setObject: photoPath forKey:@"photo"];
 
                     //add the contact to the list to return
                     [contactsWithPhoneNumbers addObject:contactDictionary];
