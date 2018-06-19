@@ -1,4 +1,4 @@
-package com.dbaq.cordova.contactsPhoneNumbers;
+package com.pavloLiapin.cordova.contactsPhoneNumbers;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
