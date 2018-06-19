@@ -92,6 +92,8 @@ public class ContactsManager extends CordovaPlugin {
             ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
             ContactsContract.CommonDataKinds.Phone.TYPE,
             ContactsContract.Data.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Email.ADDRESS,
+            ContactsContract.CommonDataKinds.Photo.PHOTO,
             ContactsContract.Data.MIMETYPE
         };
         // Retrieve only the contacts with a phone number at least
@@ -101,7 +103,7 @@ public class ContactsManager extends CordovaPlugin {
                 null,
                 ContactsContract.Data.CONTACT_ID + " ASC");
 
-        contacts = populateContactArray(cursor);
+        contacts = populateContactArray(cursor, cr);
         return contacts;
     }
 
@@ -112,7 +114,7 @@ public class ContactsManager extends CordovaPlugin {
      * @param c            the cursor
      * @return             a JSONArray of contacts
      */
-    private JSONArray populateContactArray(Cursor c) {
+    private JSONArray populateContactArray(Cursor c, ContentResolver cr) {
 
         JSONArray contacts = new JSONArray();
 
@@ -123,6 +125,7 @@ public class ContactsManager extends CordovaPlugin {
 
         JSONObject contact = new JSONObject();
         JSONArray phones = new JSONArray();
+        JSONArray emails = new JSONArray();
 
         try {
             if (c.getCount() > 0) {
@@ -140,6 +143,7 @@ public class ContactsManager extends CordovaPlugin {
                         // Clean up the objects
                         contact = new JSONObject();
                         phones = new JSONArray();
+                        emails = new JSONArray();
 
                         // Set newContact to true as we are starting to populate a new contact
                         newContact = true;
@@ -159,9 +163,19 @@ public class ContactsManager extends CordovaPlugin {
                         contact.put("middleName", c.getString(c.getColumnIndex(ContactsContract.CommonDataKinds.StructuredName.MIDDLE_NAME)));
                         contact.put("displayName", c.getString(c.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)));
                         contact.put("thumbnail", c.getString(c.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI)));
+                        contact.put("photo", "content://com.android.contacts/contacts/"+contactId+"/photo");
                     }
                     else if (mimetype.equals(ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)) {
                         phones.put(getPhoneNumber(c));
+                    }
+                    else if (mimetype.equals(ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE)) {
+                        emails.put(getEmail(c));
+                    }
+                    else if (mimetype.equals(ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE)) {
+
+                        // if (String.valueOf(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)) != null) {
+                        //  contact.put("photo", String.valueOf(c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)));
+                        // } else contact.put("photo", "no");
                     }
 
                     // Set the old contact ID
@@ -169,6 +183,7 @@ public class ContactsManager extends CordovaPlugin {
                 }
                 // Push the last contact into the contacts array
                 contact.put("phoneNumbers", phones);
+                contact.put("emails", emails);
                 contacts.put(contact);
             }
         } catch (JSONException e) {
@@ -191,6 +206,17 @@ public class ContactsManager extends CordovaPlugin {
         phoneNumber.put("normalizedNumber", (normalizedNumber == null) ? number : normalizedNumber);
         phoneNumber.put("type", getPhoneTypeLabel(cursor.getInt(cursor.getColumnIndex(Phone.TYPE))));
         return phoneNumber;
+    }
+
+
+     /**
+     * Create a email JSONObject
+     * @param cursor the current database row
+     * @return a JSONObject representing an email address
+     */
+    private String getEmail(Cursor cursor) throws JSONException {
+        String address = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA));
+        return address;
     }
 
 
